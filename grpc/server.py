@@ -3,7 +3,7 @@ from concurrent import futures
 import chat_pb2
 import chat_pb2_grpc
 
-class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
+class ChatService(chat_pb2_grpc.ChatService):
     def __init__(self):
         # Cria a lista para armazenar as 10 primeiras mensagens
         self.messages = []
@@ -37,7 +37,7 @@ class ChatServiceServicer(chat_pb2_grpc.ChatServiceServicer):
 
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    chat_pb2_grpc.add_ChatServiceServicer_to_server(ChatServiceServicer(), server)
+    chat_pb2_grpc.add_ChatServiceServicer_to_server(ChatService(), server)
     server.add_insecure_port('[::]:50051')
     server.start()
     print('Servidor iniciado na porta 50051...')

@@ -7,16 +7,21 @@ from tkinter import scrolledtext, Entry, Button, simpledialog
 
 class ChatClient:
     def __init__(self):
-        # Iniciando o gRPC no cliente
-        self.channel = grpc.insecure_channel('localhost:50051')
-        self.stub = chat_pb2_grpc.ChatServiceStub(self.channel)
+        # Obter o host e o nome de usuário 
+        self.host = simpledialog.askstring('Conexão ao Servidor', 'Digite o IP do servidor:\n(Deixar em branco = localhost)')
 
-        # Obter o nome de usuário
+        if self.host == '' or self.host == '172.0.0.1':
+            self.host = 'localhost'
+
         while True:
             self.username = simpledialog.askstring('Conexão ao Servidor', 'Digite seu nome de usuário:\n (No mínimo 3 letras)')
             if len(self.username) >= 3:
                 break
 
+        # Iniciando o gRPC no cliente
+        self.channel = grpc.insecure_channel(f'{self.host}:50051')
+        self.stub = chat_pb2_grpc.ChatServiceStub(self.channel)
+        
         # Cria a tela principal
         self.window = tk.Tk()
         self.window.title(f'Chat de {self.username}')

@@ -8,8 +8,8 @@ class ChatClient:
         # Obter o IP do servidor e o nome de usuário
         self.host = simpledialog.askstring('Conexão ao Servidor', 'Digite o IP do servidor:\n(Deixar em branco = localhost)')
 
-        if self.host == '' or self.host == 'localhost':
-            self.host == '172.0.0.1'
+        if self.host == '' or self.host == '172.0.0.1':
+            self.host = 'localhost'
 
         while True:
             self.username = simpledialog.askstring('Conexão ao Servidor', 'Digite seu nome de usuário:\n (No mínimo 3 letras)')
