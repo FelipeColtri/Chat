@@ -17,6 +17,15 @@ class ChatClient:
             if len(self.username) >= 3:
                 break
 
+        # Conexão com o servidor usando sockets
+        self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            self.client_socket.connect((self.host, 8888))
+            self.client_socket.send(self.username.encode('utf-8'))
+        except ConnectionRefusedError:
+            print("Não foi possível conectar ao servidor.")
+            exit()
+
         # Cria a tela principal
         self.window = tk.Tk()
         self.window.title(f'Chat de {self.username} - Conectado em {self.host}')
@@ -41,30 +50,29 @@ class ChatClient:
         self.window.columnconfigure(0, weight=4)
         self.window.columnconfigure(1, weight=1)
 
-        # Parte do sockets
-        self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.client_socket.connect((self.host, 12345))
-        self.client_socket.send(self.username.encode('utf-8'))
-
-        # Thread do socket
-        receive_thread = threading.Thread(target=self.receive_messages)
-        receive_thread.start()
-
-    def msg(self):
-        self.send_message()
+        # Thread para receber as mensagens do servidor socket
+        threading.Thread(target=self.receive_messages).start()
 
     def send_message(self):
+        # Pega a mensagem da caixa de entrada fazendo TRIM
         message = self.message_entry.get().strip()
         
+        # Se não vazia concatena a mensagem com o nome do usuário e manda para o servidor
         if len(message):
-            full_message = f'{self.username} -> {message}'
+            full_message = f'{self.username}: {message}'
             self.client_socket.send(full_message.encode('utf-8'))
-            self.update_messages(f'Você -> {message}', '#FF0000')
         
+        # Limpa e focaliza o campo de entrada
         self.message_entry.delete(0, tk.END)
         self.message_entry.focus()
 
-    def update_messages(self, message, color):
+    def update_messages(self, message):
+        # Cor azul para mensagen de outros usuário, vermelho para prórpia
+        color = '#0000FF'
+        if message.split(':')[0] == self.username:
+            color = '#FF0000'
+
+        # Escreve a mensagem na caixa de texto
         self.chat_box.config(state='normal')
         self.chat_box.tag_config(color, foreground=color, font=('Arial', 14, 'bold'))
         self.chat_box.insert(tk.END, message + '\n', (color,))
@@ -73,9 +81,11 @@ class ChatClient:
     def receive_messages(self):
         while True:
             try:
+                # Recebe a mensagem do servidor e manda escrever na caixa de texto
                 message = self.client_socket.recv(1024).decode('utf-8')
-                self.update_messages(message, '#0000FF')
+                self.update_messages(message)
             except:
+                # Em caso de erro sair
                 print('Erro ao receber mensagem')
                 self.client_socket.close()
                 break

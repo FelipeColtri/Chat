@@ -1,59 +1,71 @@
 import socket
 import threading
 
-# Configurações do servidor
-HOST = '127.0.0.1'  # Use o IP do servidor
-PORT = 12345
+class ChatServer:
+    def __init__(self, host='127.0.0.1', port=8888):
+        # Listas para objetos de clientes, nomes e mensagens
+        self.clients = []
+        self.usernames = []
+        self.messages = []
 
-# Criação do socket do servidor
-server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server_socket.bind((HOST, PORT))
-server_socket.listen()
-
-# Lista para armazenar conexões de clientes
-client_connections = []
-
-# Função para enviar mensagens para todos os clientes
-def broadcast(message, client_socket):
-    for client in client_connections:
-        if client != client_socket:
-            try:
-                client.send(message)
-            except:
-                # Caso a conexão com o cliente tenha falhado, remova a conexão
-                remove_client(client)
-
-# Função para remover um cliente da lista de conexões
-def remove_client(client_socket):
-    if client_socket in client_connections:
-        client_connections.remove(client_socket)
-
-# Função para lidar com as mensagens recebidas de um cliente
-def handle_client(client_socket):
-    while True:
-        try:
-            message = client_socket.recv(1024)
-            if not message:
-                remove_client(client_socket)
-                break
-            broadcast(message, client_socket)
-        except:
-            continue
-
-# Função principal para aceitar conexões e lidar com os clientes
-def main_server():
-    while True:
-        client_socket, client_address = server_socket.accept()
+        # Host e porta do servidor
+        self.host = host
+        self.port = port
         
-        username = client_socket.recv(1024).decode('utf-8')
-        welcome_message = f"Bem-vindo, {username}! Digire uma mensagem para começar.\n" + '-' * 100 + '\n' 
-        client_socket.send(welcome_message.encode('utf-8'))
-        client_connections.append(client_socket)
+        # Inicia a conexão do servidor e escuta
+        self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server.bind((self.host, self.port))
+        self.server.listen()
+        
+        print(f'Servidor iniciado na porta {self.port}...')
 
-        print(f"Conexão estabelecida com {client_address} como {username}")
-        thread = threading.Thread(target=handle_client, args=(client_socket,))
-        thread.start()
+    def broadcast(self, message):
+        # Mantém apenas as últimas 10 mensagens
+        if len(self.messages) == 10:
+            self.messages.pop()
+        self.messages.append(message)
+        
+        # Manda mensagem para todos os clientes conectados
+        for client in self.clients:
+            client.send(message)
 
-if __name__ == "__main__":
-    main_server()
+    def handle(self, client):
+        while True:
+            try:
+                # Lida com a mensagem do cliente apos receber
+                message = client.recv(1024)
+                self.broadcast(message)
+            except:
+                # Em caso de erro excluir cliente da lista e remove o nome
+                index = self.clients.index(client)
+                self.clients.remove(client)
+                client.close()
+
+                username = self.usernames[index]
+                self.usernames.remove(username)
+                break
+
+    def receive(self):
+        while True:
+            # Aceita o cliente e recebe o nome do usuário
+            client, address = self.server.accept()
+            username = client.recv(1024).decode('utf-8')
+            
+            # Adiciona o nome de usuário e objeto do cliente
+            self.usernames.append(username)
+            self.clients.append(client)
+            
+            # Avisa que foi conectado
+            print(f'O cliente {username} se conectou!')
+            client.send('Conectado ao servidor!'.encode('utf-8'))
+
+            # Cria a thread para cada cliente
+            threading.Thread(target=self.handle, args=(client,)).start()
+
+    def run(self):
+        self.receive()
+
+if __name__ == '__main__':
+    chat_server = ChatServer()
+    chat_server.run()
 
